@@ -22,25 +22,25 @@ func (s *CacheSuite) TestNewCache_UnknownCacheType_ReturnError() {
 	unknownCacheType := CacheType("unknown")
 	expectedError := fmt.Errorf("unknown cache type: %s", unknownCacheType)
 
-	cache, err := NewCache[string](unknownCacheType)
+	cache, err := NewCache[string, string](unknownCacheType)
 	assert.Nil(s.T(), cache)
 	require.Error(s.T(), err)
-	assert.Equal(s.T(), err.Error(), expectedError.Error())
+	assert.Equal(s.T(), expectedError.Error(), err.Error())
 }
 
-func (s *CacheSuite) TestNewCache_TtlCacheType_PanicCacheNotImplemented() {
+func (s *CacheSuite) TestNewCache_TtlCacheType_ReturnCache() {
 	ttlCacheType := CacheType("ttl")
 
-	assert.PanicsWithValue(s.T(), "not implemented", func() {
-		_, _ = NewCache[string](ttlCacheType)
-	})
+	cache, err := NewCache[string, string](ttlCacheType)
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), cache)
 }
 
 func (s *CacheSuite) TestNewCache_LruCacheType_PanicCacheNotImplemented() {
 	lruCacheType := CacheType("lru")
 
 	assert.PanicsWithValue(s.T(), "not implemented", func() {
-		_, _ = NewCache[string](lruCacheType)
+		_, _ = NewCache[string, string](lruCacheType)
 	})
 }
 
@@ -48,6 +48,6 @@ func (s *CacheSuite) TestNewCache_LfuCacheType_PanicCacheNotImplemented() {
 	lfuCacheType := CacheType("lfu")
 
 	assert.PanicsWithValue(s.T(), "not implemented", func() {
-		_, _ = NewCache[string](lfuCacheType)
+		_, _ = NewCache[string, string](lfuCacheType)
 	})
 }

@@ -1,8 +1,6 @@
-package inmem
-
-type Key string
+package ttlcache
 
 type CacheEntry[T any] struct {
 	Value     T
-	ExpiredAt int64
+	ExpiredAt int64 // UnixMilli
 }
