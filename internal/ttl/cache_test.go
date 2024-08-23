@@ -49,10 +49,10 @@ func (s *CacheSuite) TestCache_CacheForInt_StoreInCache() {
 	require.True(s.T(), exists)
 	assert.Equal(s.T(), value, storedValue)
 
-	time.Sleep(ttl)
+	time.Sleep(ttl + 50*time.Millisecond)
 
 	storedValue, exists = cache.Get(key)
-	require.False(s.T(), exists)
+	assert.False(s.T(), exists)
 	assert.Empty(s.T(), storedValue)
 }
 
@@ -79,9 +79,9 @@ func (s *CacheSuite) TestCache_CacheForStruct_StoreInCache() {
 	require.True(s.T(), exists)
 	assert.Equal(s.T(), value, storedValue)
 
-	time.Sleep(ttl)
+	time.Sleep(ttl + 50*time.Millisecond)
 
 	storedValue, exists = cache.Get(key)
-	require.False(s.T(), exists)
+	assert.False(s.T(), exists)
 	assert.Empty(s.T(), storedValue)
 }
