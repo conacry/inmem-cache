@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	lrucache "github.com/conacry/inmem-cache/internal/lru"
+	ttlcache "github.com/conacry/inmem-cache/internal/ttl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -34,14 +36,29 @@ func (s *CacheSuite) TestNewCache_TtlCacheType_ReturnCache() {
 	cache, err := NewCache[string, string](ttlCacheType)
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), cache)
+	assert.IsType(s.T(), &ttlcache.Cache[string, string]{}, cache)
 }
 
-func (s *CacheSuite) TestNewCache_LruCacheType_PanicCacheNotImplemented() {
+func (s *CacheSuite) TestNewCache_LruCacheTypeWithoutSize_ReturnError() {
 	lruCacheType := CacheType("lru")
+	expectedErr := fmt.Errorf("capacity should be greater than 0")
 
-	assert.PanicsWithValue(s.T(), "not implemented", func() {
-		_, _ = NewCache[string, string](lruCacheType)
-	})
+	cache, err := NewCache[string, string](lruCacheType)
+	assert.Nil(s.T(), cache)
+	require.Error(s.T(), err)
+	assert.Equal(s.T(), expectedErr.Error(), err.Error())
+}
+
+func (s *CacheSuite) TestNewCache_LruCacheType_ReturnCache() {
+	lruCacheType := CacheType("lru")
+	opts := []Option{
+		WithSize(50),
+	}
+
+	cache, err := NewCache[string, string](lruCacheType, opts...)
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), cache)
+	assert.IsType(s.T(), &lrucache.Cache[string, string]{}, cache)
 }
 
 func (s *CacheSuite) TestNewCache_LfuCacheType_PanicCacheNotImplemented() {

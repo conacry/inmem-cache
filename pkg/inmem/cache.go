@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	lrucache "github.com/conacry/inmem-cache/internal/lru"
 	ttlcache "github.com/conacry/inmem-cache/internal/ttl"
 	"golang.org/x/exp/constraints"
 )
@@ -18,7 +19,7 @@ func NewCache[K constraints.Ordered, V any](cacheType CacheType, opts ...Option)
 	case TtlCacheType:
 		return makeTtlCache[K, V](opts...)
 	case LruCacheType:
-		panic("not implemented")
+		return makeLruCache[K, V](opts...)
 	case LfuCacheType:
 		panic("not implemented")
 	}
@@ -37,4 +38,17 @@ func makeTtlCache[K constraints.Ordered, V any](opts ...Option) (Cache[K, V], er
 	}
 
 	return ttlcache.NewCache[K, V](ttlCacheInitParams), nil
+}
+
+func makeLruCache[K constraints.Ordered, V any](opts ...Option) (Cache[K, V], error) {
+	param := CacheInitParam{}
+	for _, opt := range opts {
+		param = opt(param)
+	}
+
+	lruCacheInitParams := lrucache.CacheInitParam{
+		Capacity: param.Size,
+	}
+
+	return lrucache.NewCache[K, V](lruCacheInitParams)
 }
