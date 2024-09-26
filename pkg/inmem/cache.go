@@ -2,53 +2,82 @@ package inmem
 
 import (
 	"fmt"
-	"time"
 
+	lfucache "github.com/conacry/inmem-cache/internal/lfu"
 	lrucache "github.com/conacry/inmem-cache/internal/lru"
 	ttlcache "github.com/conacry/inmem-cache/internal/ttl"
-	"golang.org/x/exp/constraints"
 )
 
-type Cache[K constraints.Ordered, V any] interface {
+type Cache[K comparable, V any] interface {
 	Get(key K) (V, bool)
-	Set(key K, value V, ttl time.Duration) error
+	Set(key K, value V) error
 }
 
-func NewCache[K constraints.Ordered, V any](cacheType CacheType, opts ...Option) (Cache[K, V], error) {
+func NewCache[K comparable, V any](cacheType CacheType, opts ...Option) (Cache[K, V], error) {
 	switch cacheType {
 	case TtlCacheType:
 		return makeTtlCache[K, V](opts...)
 	case LruCacheType:
 		return makeLruCache[K, V](opts...)
 	case LfuCacheType:
-		panic("not implemented")
+		return makeLfuCache[K, V](opts...)
+	default:
+		return nil, fmt.Errorf("unknown cache type: %s", cacheType)
 	}
-
-	return nil, fmt.Errorf("unknown cache type: %s", cacheType)
 }
 
-func makeTtlCache[K constraints.Ordered, V any](opts ...Option) (Cache[K, V], error) {
+func makeTtlCache[K comparable, V any](opts ...Option) (Cache[K, V], error) {
 	param := CacheInitParam{}
 	for _, opt := range opts {
 		param = opt(param)
 	}
 
 	ttlCacheInitParams := ttlcache.CacheInitParam{
-		Size: param.Size,
+		Capacity: param.Capacity,
+		TTL:      param.TTL,
 	}
 
-	return ttlcache.NewCache[K, V](ttlCacheInitParams), nil
+	cache, err := ttlcache.NewCache[K, V](ttlCacheInitParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TTL cache: %w", err)
+	}
+
+	return cache, nil
 }
 
-func makeLruCache[K constraints.Ordered, V any](opts ...Option) (Cache[K, V], error) {
+func makeLruCache[K comparable, V any](opts ...Option) (Cache[K, V], error) {
 	param := CacheInitParam{}
 	for _, opt := range opts {
 		param = opt(param)
 	}
 
-	lruCacheInitParams := lrucache.CacheInitParam{
-		Capacity: param.Size,
+	lruCacheInitParams := lrucache.InitParam{
+		Capacity: param.Capacity,
+		TTL:      param.TTL,
 	}
 
-	return lrucache.NewCache[K, V](lruCacheInitParams)
+	cache, err := lrucache.NewCache[K, V](lruCacheInitParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create LRU cache: %w", err)
+	}
+
+	return cache, nil
+}
+
+func makeLfuCache[K comparable, V any](opts ...Option) (Cache[K, V], error) {
+	param := CacheInitParam{}
+	for _, opt := range opts {
+		param = opt(param)
+	}
+
+	lfuCacheInitParams := lfucache.InitParam{
+		Capacity: param.Capacity,
+	}
+
+	cache, err := lfucache.NewCache[K, V](lfuCacheInitParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create LFU cache: %w", err)
+	}
+
+	return cache, nil
 }

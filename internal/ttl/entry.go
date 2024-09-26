@@ -4,13 +4,13 @@ import (
 	"time"
 )
 
-type Entry[T any] struct {
+type entry[T any] struct {
 	value     T
 	expiredAt time.Time
 }
 
-func NewEntry[T any](value T, ttl time.Duration) Entry[T] {
-	return Entry[T]{
+func newEntry[T any](value T, ttl time.Duration) entry[T] {
+	return entry[T]{
 		value:     value,
 		expiredAt: time.Now().Add(ttl),
 	}

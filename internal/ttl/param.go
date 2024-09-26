@@ -1,5 +1,10 @@
 package ttlcache
 
+import (
+	"time"
+)
+
 type CacheInitParam struct {
-	Size int
+	Capacity int
+	TTL      time.Duration
 }

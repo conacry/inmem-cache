@@ -1,14 +1,26 @@
 package inmem
 
+import (
+	"time"
+)
+
 type CacheInitParam struct {
-	Size int
+	Capacity int
+	TTL      time.Duration
 }
 
 type Option func(param CacheInitParam) CacheInitParam
 
-func WithSize(size int) Option {
+func WithCapacity(capacity int) Option {
 	return func(param CacheInitParam) CacheInitParam {
-		param.Size = size
+		param.Capacity = capacity
+		return param
+	}
+}
+
+func WithTTL(ttl time.Duration) Option {
+	return func(param CacheInitParam) CacheInitParam {
+		param.TTL = ttl
 		return param
 	}
 }
