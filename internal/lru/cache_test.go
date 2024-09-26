@@ -1,7 +1,6 @@
 package lrucache
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -21,19 +20,34 @@ func TestCacheSuite(t *testing.T) {
 
 func (s *CacheSuite) TestNewCache_IllegalCapacity_ReturnError() {
 	illegalCapacity := 0
-	expectedErr := fmt.Errorf("capacity should be greater than 0")
 
-	params := CacheInitParam{Capacity: illegalCapacity}
+	params := InitParam{Capacity: illegalCapacity}
 	cache, err := NewCache[string, struct{}](params)
 	assert.Nil(s.T(), cache)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), expectedErr.Error(), err.Error())
+	assert.ErrorIs(s.T(), err, ErrIllegalCapacity)
 }
 
-func (s *CacheSuite) TestNewCache_CorrectCapacity_ReturnCache() {
+func (s *CacheSuite) TestNewCache_IllegalTTL_ReturnError() {
 	correctCapacity := 50
+	illegalTTL := 0 * time.Millisecond
 
-	params := CacheInitParam{Capacity: correctCapacity}
+	params := InitParam{
+		Capacity: correctCapacity,
+		TTL:      illegalTTL,
+	}
+	cache, err := NewCache[string, struct{}](params)
+	assert.Nil(s.T(), cache)
+	assert.ErrorIs(s.T(), err, ErrIllegalTTL)
+}
+
+func (s *CacheSuite) TestNewCache_CorrectInitParams_ReturnCache() {
+	correctCapacity := 50
+	correctTTL := 100 * time.Millisecond
+
+	params := InitParam{
+		Capacity: correctCapacity,
+		TTL:      correctTTL,
+	}
 	cache, err := NewCache[string, struct{}](params)
 	require.NotNil(s.T(), cache)
 	require.NoError(s.T(), err)
@@ -45,7 +59,10 @@ func (s *CacheSuite) TestCache_TtlIsNotExpired_CacheReturnedStoredValue() {
 		Field2 int
 	}
 
-	params := CacheInitParam{Capacity: 1}
+	params := InitParam{
+		Capacity: 1,
+		TTL:      100 * time.Millisecond,
+	}
 	cache, err := NewCache[string, StructForCache](params)
 	require.NotNil(s.T(), cache)
 	require.NoError(s.T(), err)
@@ -55,9 +72,8 @@ func (s *CacheSuite) TestCache_TtlIsNotExpired_CacheReturnedStoredValue() {
 		Field1: "field1",
 		Field2: 100500,
 	}
-	ttl := 10 * time.Millisecond
 
-	err = cache.Set(key, value, ttl)
+	err = cache.Set(key, value)
 	require.NoError(s.T(), err)
 
 	storedValue, exists := cache.Get(key)
@@ -71,7 +87,10 @@ func (s *CacheSuite) TestCache_TtlIsExpired_CacheWasNotReturnStoredValue() {
 		Field2 int
 	}
 
-	params := CacheInitParam{Capacity: 1}
+	params := InitParam{
+		Capacity: 1,
+		TTL:      100 * time.Millisecond,
+	}
 	cache, err := NewCache[string, StructForCache](params)
 	require.NotNil(s.T(), cache)
 	require.NoError(s.T(), err)
@@ -81,12 +100,11 @@ func (s *CacheSuite) TestCache_TtlIsExpired_CacheWasNotReturnStoredValue() {
 		Field1: "field1",
 		Field2: 100500,
 	}
-	ttl := 10 * time.Millisecond
 
-	err = cache.Set(key, value, ttl)
+	err = cache.Set(key, value)
 	require.NoError(s.T(), err)
 
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	storedValue, exists := cache.Get(key)
 	assert.False(s.T(), exists)
@@ -99,7 +117,10 @@ func (s *CacheSuite) TestCache_NotEnoughCapacity_TheOldestValueWasEvicted() {
 		Field2 int
 	}
 
-	params := CacheInitParam{Capacity: 1}
+	params := InitParam{
+		Capacity: 1,
+		TTL:      100 * time.Millisecond,
+	}
 	cache, err := NewCache[string, StructForCache](params)
 	require.NotNil(s.T(), cache)
 	require.NoError(s.T(), err)
@@ -109,20 +130,18 @@ func (s *CacheSuite) TestCache_NotEnoughCapacity_TheOldestValueWasEvicted() {
 		Field1: "fieldStructOne1",
 		Field2: 100500,
 	}
-	ttlOne := 50 * time.Millisecond
 
 	keyTwo := "keyTwo"
 	valueTwo := StructForCache{
 		Field1: "fieldStructTwo1",
 		Field2: 100501,
 	}
-	ttlTwo := 50 * time.Millisecond
 
-	err = cache.Set(keyOne, valueOne, ttlOne)
+	err = cache.Set(keyOne, valueOne)
 	require.NoError(s.T(), err)
 	assert.Len(s.T(), cache.data, 1)
 
-	err = cache.Set(keyTwo, valueTwo, ttlTwo)
+	err = cache.Set(keyTwo, valueTwo)
 	require.NoError(s.T(), err)
 	assert.Len(s.T(), cache.data, 1)
 
@@ -141,7 +160,10 @@ func (s *CacheSuite) TestCache_UsedTheSameKey_ValueInCacheWasUpdated() {
 		Field2 int
 	}
 
-	params := CacheInitParam{Capacity: 1}
+	params := InitParam{
+		Capacity: 1,
+		TTL:      100 * time.Millisecond,
+	}
 	cache, err := NewCache[string, StructForCache](params)
 	require.NotNil(s.T(), cache)
 	require.NoError(s.T(), err)
@@ -151,15 +173,13 @@ func (s *CacheSuite) TestCache_UsedTheSameKey_ValueInCacheWasUpdated() {
 		Field1: "fieldStructOne1",
 		Field2: 100500,
 	}
-	ttlOne := 50 * time.Millisecond
 
 	valueTwo := StructForCache{
 		Field1: "fieldStructTwo1",
 		Field2: 100501,
 	}
-	ttlTwo := 50 * time.Millisecond
 
-	err = cache.Set(keyOne, valueOne, ttlOne)
+	err = cache.Set(keyOne, valueOne)
 	require.NoError(s.T(), err)
 	assert.Len(s.T(), cache.data, 1)
 
@@ -167,7 +187,7 @@ func (s *CacheSuite) TestCache_UsedTheSameKey_ValueInCacheWasUpdated() {
 	assert.True(s.T(), exists)
 	assert.Equal(s.T(), valueOne, storedValueOne)
 
-	err = cache.Set(keyOne, valueTwo, ttlTwo)
+	err = cache.Set(keyOne, valueTwo)
 	require.NoError(s.T(), err)
 	assert.Len(s.T(), cache.data, 1)
 

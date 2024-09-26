@@ -18,20 +18,23 @@ func TestCacheSuite(t *testing.T) {
 	suite.Run(t, new(CacheSuite))
 }
 
-func (s *CacheSuite) TestCache_NewCache_WithoutParams() {
+func (s *CacheSuite) TestNewCache_WithoutParams_ReturnErr() {
 	initParams := CacheInitParam{}
 
-	cache := NewCache[string, int](initParams)
-	assert.NotNil(s.T(), cache)
+	cache, err := NewCache[string, int](initParams)
+	assert.ErrorIs(s.T(), err, ErrIllegalTTL)
+	assert.Nil(s.T(), cache)
 }
 
-func (s *CacheSuite) TestCache_NewCache_WithParams() {
+func (s *CacheSuite) TestNewCache_WithAllParams_ReturnCache() {
 	initParams := CacheInitParam{
-		Size: 100,
+		TTL:      100 * time.Millisecond,
+		Capacity: 100,
 	}
 
-	cache := NewCache[string, int](initParams)
+	cache, err := NewCache[string, int](initParams)
 	assert.NotNil(s.T(), cache)
+	assert.NoError(s.T(), err)
 }
 
 func (s *CacheSuite) TestCache_CacheForInt_StoreInCache() {
@@ -39,10 +42,14 @@ func (s *CacheSuite) TestCache_CacheForInt_StoreInCache() {
 	value := 100500
 	ttl := 100 * time.Millisecond
 
-	initParams := CacheInitParam{}
-	cache := NewCache[string, int](initParams)
+	initParams := CacheInitParam{
+		TTL: ttl,
+	}
+	cache, err := NewCache[string, int](initParams)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cache)
 
-	err := cache.Set(key, value, ttl)
+	err = cache.Set(key, value)
 	require.NoError(s.T(), err)
 
 	storedValue, exists := cache.Get(key)
@@ -69,10 +76,14 @@ func (s *CacheSuite) TestCache_CacheForStruct_StoreInCache() {
 	}
 	ttl := 100 * time.Millisecond
 
-	initParams := CacheInitParam{}
-	cache := NewCache[string, StructForCache](initParams)
+	initParams := CacheInitParam{
+		TTL: ttl,
+	}
+	cache, err := NewCache[string, StructForCache](initParams)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cache)
 
-	err := cache.Set(key, value, ttl)
+	err = cache.Set(key, value)
 	require.NoError(s.T(), err)
 
 	storedValue, exists := cache.Get(key)
@@ -82,6 +93,30 @@ func (s *CacheSuite) TestCache_CacheForStruct_StoreInCache() {
 	time.Sleep(ttl + 50*time.Millisecond)
 
 	storedValue, exists = cache.Get(key)
+	assert.False(s.T(), exists)
+	assert.Empty(s.T(), storedValue)
+}
+
+func (s *CacheSuite) TestCache_GetByNotExistedKey_ReturnDefaultValue() {
+	key := "key"
+	value := 100500
+	ttl := 100 * time.Millisecond
+
+	initParams := CacheInitParam{
+		TTL: ttl,
+	}
+	cache, err := NewCache[string, int](initParams)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cache)
+
+	err = cache.Set(key, value)
+	require.NoError(s.T(), err)
+
+	storedValue, exists := cache.Get(key)
+	require.True(s.T(), exists)
+	assert.Equal(s.T(), value, storedValue)
+
+	storedValue, exists = cache.Get("not_existed_key")
 	assert.False(s.T(), exists)
 	assert.Empty(s.T(), storedValue)
 }

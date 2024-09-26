@@ -3,21 +3,25 @@ package ttlcache
 import (
 	"sync"
 	"time"
-
-	"golang.org/x/exp/constraints"
 )
 
-type Cache[K constraints.Ordered, V any] struct {
-	data map[K]Entry[V]
+type Cache[K comparable, V any] struct {
+	data map[K]entry[V]
+	ttl  time.Duration
 	mu   sync.Mutex
 }
 
-func NewCache[K constraints.Ordered, V any](initParams CacheInitParam) *Cache[K, V] {
-	cache := Cache[K, V]{
-		data: make(map[K]Entry[V], initParams.Size),
+func NewCache[K comparable, V any](params CacheInitParam) (*Cache[K, V], error) {
+	if params.TTL <= 0 {
+		return nil, ErrIllegalTTL
 	}
 
-	return &cache
+	cache := Cache[K, V]{
+		data: make(map[K]entry[V], params.Capacity),
+		ttl:  params.TTL,
+	}
+
+	return &cache, nil
 }
 
 func (c *Cache[K, T]) Get(key K) (T, bool) {
@@ -37,8 +41,8 @@ func (c *Cache[K, T]) Get(key K) (T, bool) {
 	return v.value, true
 }
 
-func (c *Cache[K, V]) Set(key K, value V, ttl time.Duration) error {
-	item := NewEntry[V](value, ttl)
+func (c *Cache[K, V]) Set(key K, value V) error {
+	item := newEntry[V](value, c.ttl)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()

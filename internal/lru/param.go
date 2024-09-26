@@ -1,5 +1,10 @@
 package lrucache
 
-type CacheInitParam struct {
+import (
+	"time"
+)
+
+type InitParam struct {
 	Capacity int
+	TTL      time.Duration
 }

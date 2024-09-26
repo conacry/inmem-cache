@@ -8,46 +8,33 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type QueueSuite struct {
+type AgeListSuite struct {
 	suite.Suite
 }
 
-func TestQueueSuite(t *testing.T) {
+func TestAgeListSuite(t *testing.T) {
 	t.Parallel()
-	suite.Run(t, new(QueueSuite))
+	suite.Run(t, new(AgeListSuite))
 }
 
-func (s *QueueSuite) TestNewQueue_IllegalCapacity_ReturnQueue() {
-	illegalCapacity := 0
-	expectedErr := "capacity should be greater than 0"
-
-	q, err := NewAgeList[int](illegalCapacity)
-	assert.Nil(s.T(), q)
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), expectedErr, err.Error())
-}
-
-func (s *QueueSuite) TestNewQueue_CorrectCapacity_ReturnQueue() {
+func (s *AgeListSuite) TestNewQueue_ReturnAgeList() {
 	correctCapacity := 50
-	q, err := NewAgeList[int](correctCapacity)
+	q := newAgeList[int](correctCapacity)
 	require.NotNil(s.T(), q)
-	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), correctCapacity, cap(q.data))
 }
 
-func (s *QueueSuite) TestAdd_ValueWasAdded() {
-	q, err := NewAgeList[int](50)
+func (s *AgeListSuite) TestAdd_ValueWasAdded() {
+	q := newAgeList[int](50)
 	require.NotNil(s.T(), q)
-	require.NoError(s.T(), err)
 
 	q.Add(100500)
 	assert.Equal(s.T(), []int{100500}, q.data)
 }
 
-func (s *QueueSuite) TestRemoveTheOldestValue_TheOldestValueWasRemoved() {
-	q, err := NewAgeList[int](50)
+func (s *AgeListSuite) TestRemoveTheOldestValue_ListContainsValues_TheOldestValueWasRemoved() {
+	q := newAgeList[int](50)
 	require.NotNil(s.T(), q)
-	require.NoError(s.T(), err)
 
 	q.Add(100500)
 	q.Add(100501)
@@ -58,10 +45,21 @@ func (s *QueueSuite) TestRemoveTheOldestValue_TheOldestValueWasRemoved() {
 	assert.Equal(s.T(), []int{100501, 100502}, q.data)
 }
 
-func (s *QueueSuite) TestMakeValueYoungest_ValueWasMadeYoungest() {
-	q, err := NewAgeList[int](50)
+func (s *AgeListSuite) TestRemoveTheOldestValue_ListIsEmpty_ReturnDefaultValue() {
+	q := newAgeList[int](50)
 	require.NotNil(s.T(), q)
-	require.NoError(s.T(), err)
+
+	keyToRemove := q.GetOldest()
+	require.Equal(s.T(), 0, keyToRemove)
+
+	assert.NotPanics(s.T(), func() {
+		q.Remove(keyToRemove)
+	})
+}
+
+func (s *AgeListSuite) TestMakeValueYoungest_ValueWasMadeYoungest() {
+	q := newAgeList[int](50)
+	require.NotNil(s.T(), q)
 
 	q.Add(100500)
 	q.Add(100501)
@@ -70,10 +68,9 @@ func (s *QueueSuite) TestMakeValueYoungest_ValueWasMadeYoungest() {
 	assert.Equal(s.T(), []int{100500, 100502, 100501}, q.data)
 }
 
-func (s *QueueSuite) TestRemove_ValueWasRemoved() {
-	q, err := NewAgeList[int](50)
+func (s *AgeListSuite) TestRemove_ValueWasRemoved() {
+	q := newAgeList[int](50)
 	require.NotNil(s.T(), q)
-	require.NoError(s.T(), err)
 
 	q.Add(100500)
 	q.Add(100501)
